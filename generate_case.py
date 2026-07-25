@@ -16,16 +16,29 @@ Two variants are exported (units: mm):
       wall: the electronics side is screwed shut, the storage side is a
       tool-free snap-fit hatch with thumb notches.
 
-Layout of the storage variant (top view, +X right, +Y back):
+Lanes are ordered and oriented to match the assembled unit: the cap and the
+output cable are soldered to the buck module's OUT pads, and flying leads run
+from the PD board's screw terminal to the buck's IN pads.
 
-        +---------------------------++------------+----------+
-        | cap cradle (saddle ribs)  ||            |          |
-        |---------------------------|| BP-511     |  cable   |
-        | buck module bay   [notch]->  dummy      |  bay     |
-        |---------------------------|| pocket     | [exit]-> |
-   USB-C| PD trigger bay            ||            |          |
-   <----|                           ||            |          |
-        +---------------------------++------------+----------+
+        +--------------------------------------+
+        |     [====== 1000uF cap ======]       |  cap lane
+        |  ^leads   ----- divider -------------|
+   out <-|  [====== buck module ======]  IN>   |  buck lane
+        |  OUT      ------- divider ------     |
+   USB-C|  [===== PD trigger =====] term>  ~~  |  PD lane
+   <----|                              (loop)  |
+        +--------------------------------------+
+           ^ OUT end                  IN end ^
+
+Storage variant (top view): the same electronics section, then a full-height
+wall and the storage bays. Its output cable runs back over the top of the buck
+module and through a high notch in that wall.
+
+        +---------------- elec ----++------------+----------+
+        |    (as above)            || BP-511     |  cable   |
+        |                  [notch]->  dummy      |  bay     |
+        |                          || pocket     | [exit]-> |
+        +--------------------------++------------+----------+
              ^ screwed lid               ^ snap hatch
 
 Run:  python3 generate_case.py
@@ -51,7 +64,20 @@ CAP_LANE_W = 18.5   # cap 17 dia
 DIV_T = 2.0         # lane divider thickness
 DIV_H = 10.0        # lane divider height above floor
 
-ELEC_LEN = 50.0     # electronics section interior length (X)
+# As-built layout. In the assembled unit the 1000uF cap and the output cable
+# are soldered straight onto the buck module's OUT+/OUT- pads with short
+# leads, and flying leads run from the PD board's screw terminal to the buck's
+# IN pads. So the buck is placed IN-end-first next to the PD board's terminal
+# (short hop for the input pair) which puts OUT at the USB-C end, with the
+# cap's lead end right beside it. Both dividers are cut short so the soldered
+# wires can cross lanes instead of arching over a 10 mm wall.
+ELEC_LEN = 56.0     # electronics section interior length (X)
+PD_LEN = 42.0       # PD trigger board length
+BUCK_LEN = 43.0     # buck module length
+BUCK_END_GAP = 4.0  # from the buck's IN end to the far wall (wire bend room)
+CAP_LEAD_ZONE = 12.0   # from the cap's lead-end face to the OUT-end wall
+WIRE_DIV_GAP = 16.0    # PD/buck divider stops short by this at the IN end
+LEAD_DIV_GAP = 16.0    # buck/cap divider stops short by this at the OUT end
 INT_H_COMPACT = 18.5   # buck ~14 tall, 17 dia cap top at ~17.5
 INT_H_STORAGE = 26.5   # BP-511 dummy is ~21 thick lying flat, plus ~5.5 mm
                        # headroom: its cable enters through a hole in the
@@ -214,22 +240,32 @@ def build(with_storage):
     cavity = bx(IX0, PD_Y0, IZ0, ix1, CAP_Y1, iz1 + 1)
     base = diff(shell, [cavity])
 
+    # component positions. OUT end of the chain is at IX0 (the USB-C wall),
+    # IN end at ex1.
+    buck_x1 = ex1 - BUCK_END_GAP          # buck IN end
+    buck_x0 = buck_x1 - BUCK_LEN          # buck OUT end
+    cap_x0 = IX0 + CAP_LEAD_ZONE          # cap lead-end face
+    cap_x1 = cap_x0 + CAP_LEN
+
     adds = []
-    # lane dividers (electronics section)
-    adds.append(bx(IX0, PD_Y1, IZ0, ex1, BUCK_Y0, IZ0 + DIV_H))
-    adds.append(bx(IX0, BUCK_Y1, IZ0, ex1, CAP_Y0, IZ0 + DIV_H))
+    # lane dividers, each stopping short at the end where soldered wires have
+    # to cross: input pair at the IN end, cap leads + output cable at the OUT
+    # end.
+    adds.append(bx(IX0, PD_Y1, IZ0, ex1 - WIRE_DIV_GAP, BUCK_Y0,
+                   IZ0 + DIV_H))
+    adds.append(bx(IX0 + LEAD_DIV_GAP, BUCK_Y1, IZ0, ex1, CAP_Y0,
+                   IZ0 + DIV_H))
 
-    # buck module end stops (board 43 long, centered -> 3.5 mm inset each end)
-    for x0, x1 in [(IX0, IX0 + 3.0), (ex1 - 3.0, ex1)]:
-        adds.append(bx(x0, BUCK_Y0, IZ0, x1, BUCK_Y0 + 3.0, IZ0 + 8.0))
-        adds.append(bx(x0, BUCK_Y1 - 3.0, IZ0, x1, BUCK_Y1, IZ0 + 8.0))
+    # buck module corner stops, kept low so the soldered leads clear them
+    for x0, x1 in [(buck_x0 - 3.0, buck_x0), (buck_x1, buck_x1 + 3.0)]:
+        adds.append(bx(x0, BUCK_Y0, IZ0, x1, BUCK_Y0 + 3.0, IZ0 + 5.0))
+        adds.append(bx(x0, BUCK_Y1 - 3.0, IZ0, x1, BUCK_Y1, IZ0 + 5.0))
 
-    # PD board end stop (board sits against USB-C wall; stop at its far end,
-    # 42 mm board + 0.5 mm clearance)
-    adds.append(bx(IX0 + 42.5, PD_Y1 - 3.0, IZ0, IX0 + 44.5, PD_Y1, IZ0 + 8.0))
+    # PD board end stop (board sits against USB-C wall; stop at its far end)
+    adds.append(bx(IX0 + PD_LEN + 0.5, PD_Y1 - 3.0, IZ0,
+                   IX0 + PD_LEN + 2.5, PD_Y1, IZ0 + 8.0))
 
-    # capacitor saddle ribs at the quarter points of the centered cap body
-    cap_x0 = IX0 + (ELEC_LEN - CAP_LEN) / 2
+    # capacitor saddle ribs at the quarter points of the cap body
     rib_solids = []
     for rcx in (cap_x0 + CAP_LEN * 0.25, cap_x0 + CAP_LEN * 0.75):
         rib_solids.append(bx(rcx - RIB_T / 2, CAP_Y0, IZ0, rcx + RIB_T / 2,
@@ -268,8 +304,10 @@ def build(with_storage):
 
     wire_cy = (BUCK_Y0 + BUCK_Y1) / 2
     if with_storage:
-        # notch in the section wall: buck output feeds the storage bay
-        cuts.append(bx(ex1 - 0.1, wire_cy - WIRE_SLOT_W / 2, IZ0 + 7.0,
+        # the output cable is soldered at the buck's OUT end (by the USB-C
+        # wall), so it runs back over the top of the module and through a
+        # high notch in the section wall into the storage bay
+        cuts.append(bx(ex1 - 0.1, wire_cy - WIRE_SLOT_W / 2, IZ0 + 15.0,
                        bay_x0 + 0.1, wire_cy + WIRE_SLOT_W / 2, iz1 + 1))
         # cable exit slot in the outer right wall, centered
         exit_cy = (IY0 + CAP_Y1) / 2
@@ -293,10 +331,11 @@ def build(with_storage):
             cuts.append(cyl_y(snap_cx, ny0, ny1,
                               base_h + NOTCH_R - NOTCH_DROP, NOTCH_R))
     else:
-        # output wire slot straight through the right wall
+        # output cable exits the same end wall it is soldered next to (the
+        # buck's OUT end), one lane over from the USB-C opening
         exit_cy = wire_cy
-        cuts.append(bx(ix1 - 0.1, wire_cy - WIRE_SLOT_W / 2, IZ0 + 7.0,
-                       out_len + 1, wire_cy + WIRE_SLOT_W / 2, base_h + 1))
+        cuts.append(bx(-1, wire_cy - WIRE_SLOT_W / 2, IZ0 + 5.0,
+                       IX0 + 0.1, wire_cy + WIRE_SLOT_W / 2, base_h + 1))
 
     base = diff(base, cuts)
 
@@ -317,23 +356,23 @@ def build(with_storage):
         c = []
         n_slots = 5
         slot_len = 26.0
-        slot_x0 = IX0 + (ELEC_LEN - slot_len) / 2
+        slot_x0 = (buck_x0 + buck_x1 - slot_len) / 2
         for i in range(n_slots):
             sy = BUCK_Y0 + 2.5 + i * (BUCK_LANE_W - 5 - 3.0) / (n_slots - 1)
             c.append(bx(slot_x0, sy, base_h - 1,
                         slot_x0 + slot_len, sy + 3.0, base_h + LID_T + 1))
-        # access slot over the PD board voltage button / LEDs
-        c.append(bx(IX0 + 6.0, usb_cy - 3.0, base_h - 1,
-                    IX0 + 20.0, usb_cy + 3.0, base_h + LID_T + 1))
+        # window over the PD board's voltage button and its LED row
+        c.append(bx(IX0 + 7.0, usb_cy - 5.0, base_h - 1,
+                    IX0 + 33.0, usb_cy + 5.0, base_h + LID_T + 1))
         return c
 
     post_lip_cuts = [cyl_z(px, py, base_h - LIP_H - 1, base_h + 1,
                            POST_D + 2 * POST_LIP_CLR) for px, py in posts]
 
     if not with_storage:
-        exit_lip_cut = bx(ix1 - LIP_T - LIP_CLR - 1,
-                          exit_cy - WIRE_SLOT_W / 2 - 1, base_h - LIP_H - 1,
-                          ix1 + 1, exit_cy + WIRE_SLOT_W / 2 + 1, base_h + 1)
+        exit_lip_cut = bx(IX0 - 1, exit_cy - WIRE_SLOT_W / 2 - 1,
+                          base_h - LIP_H - 1, IX0 + LIP_T + LIP_CLR + 1,
+                          exit_cy + WIRE_SLOT_W / 2 + 1, base_h + 1)
         lip = lip_ring(IX0, PD_Y0, ix1, CAP_Y1, base_h,
                        post_lip_cuts + [exit_lip_cut])
         lid = diff(union([full_plate, lip]), screw_cuts() + vent_cuts())
