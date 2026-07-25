@@ -41,7 +41,7 @@ FLOOR = 2.4         # floor thickness
 LID_T = 2.4         # lid plate thickness
 LIP_H = 2.5         # lid alignment lip height
 LIP_T = 1.6         # lid lip thickness
-LIP_CLR = 0.3       # lip-to-wall clearance per side
+LIP_CLR = 0.4       # lip-to-wall clearance per side
 CORNER_R = 3.0      # outer corner radius
 
 # component envelopes (incl. fitting clearance)
@@ -66,7 +66,8 @@ SEC_DIV_T = 2.0        # full-height wall between electronics and storage
 LID_GAP = 0.4          # gap between the two lid plates at the split
 
 # snap-fit hatch (storage lid)
-SNAP_RIDGE_R = 0.55    # half-round ridge on the hatch lip, front + back
+SNAP_RIDGE_R = 0.65    # half-round ridge on the hatch lip, front + back
+                       # (sized for ~0.25 mm engagement past the wall face)
 SNAP_RIDGE_L = 16.0
 SNAP_GROOVE_R = 0.8    # matching groove in the wall inner faces
 SNAP_GROOVE_L = 20.0
@@ -75,10 +76,13 @@ NOTCH_R = 5.0          # thumb notch in the wall top edges
 NOTCH_DROP = 3.0       # notch depth below the lid seam
 
 POST_D = 7.0        # lid screw posts
+POST_LIP_CLR = 0.8  # lip cutout clearance around each post (per side);
+                    # printed posts run oversize and lip cutouts undersize,
+                    # so this is deliberately generous
 PILOT_D = 2.7       # M3 self-tap pilot
 PILOT_DEPTH = 11.0
-SCREW_CLR_D = 3.4   # M3 clearance in lid
-CSK_D = 6.4         # countersink diameter
+SCREW_CLR_D = 3.6   # M3 clearance in lid (prints ~0.2-0.3 undersize)
+CSK_D = 7.0         # countersink diameter (M3 csk head is 6.0 nominal)
 
 CAP_D = 13.0
 CAP_SADDLE_R = CAP_D / 2 + 0.25
@@ -309,7 +313,7 @@ def build(with_storage):
         return c
 
     post_lip_cuts = [cyl_z(px, py, base_h - LIP_H - 1, base_h + 1,
-                           POST_D + 2 * LIP_CLR) for px, py in posts]
+                           POST_D + 2 * POST_LIP_CLR) for px, py in posts]
 
     if not with_storage:
         exit_lip_cut = bx(ix1 - LIP_T - LIP_CLR - 1,
