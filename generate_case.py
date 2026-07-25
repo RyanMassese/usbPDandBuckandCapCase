@@ -2,7 +2,7 @@
 """
 3D-printable enclosure for:
   1x Altronics Z6334  DC-DC buck module (LM2596, 43 x 21 x ~14 mm)
-  1x Altronics R6187  Lelon 1000uF 50V low-ESR capacitor (17 mm dia x 25 mm)
+  1x Altronics R6187  Lelon 1000uF 50V low-ESR capacitor (17 mm dia x 33 mm)
   1x Core Electronics USB-C PD trigger board, selectable voltage (42 x 18 mm)
 
 Two variants are exported (units: mm):
@@ -53,14 +53,20 @@ DIV_H = 10.0        # lane divider height above floor
 
 ELEC_LEN = 50.0     # electronics section interior length (X)
 INT_H_COMPACT = 18.5   # buck ~14 tall, 17 dia cap top at ~17.5
-INT_H_STORAGE = 22.0   # BP-511 dummy is ~21 thick, lying flat
+INT_H_STORAGE = 26.5   # BP-511 dummy is ~21 thick lying flat, plus ~5.5 mm
+                       # headroom: its cable enters through a hole in the
+                       # dummy's TOP face and has to bend over the battery
 
 # storage section (BP-511: 55.2 x 38.2 x 20.8 nominal)
 BATT_POCKET_W = 40.0   # X, battery 38.2 wide
 BATT_POCKET_L = 56.0   # Y, battery 55.2 long
 BATT_RIB_T = 1.6       # retaining rib between battery and cable bay
 BATT_RIB_H = 12.0
-BATT_RIB_GAP = 24.0    # centered gap: finger access + attached-cable pass
+BATT_RIB_GAP = 26.0    # gap at the cable end of the pocket (the dummy's
+                       # top-face cable hole is near one short end): finger
+                       # access + attached-cable pass into the cable bay
+DEPLOY_SLOT_W = 8.0    # slot in the outer back wall over the battery pocket
+                       # so the cable can run straight out to the camera
 CABLE_BAY_W = 34.0     # ~45 cm^3: 2 m of 4 mm cable coiled + plug
 SEC_DIV_T = 2.0        # full-height wall between electronics and storage
 LID_GAP = 0.4          # gap between the two lid plates at the split
@@ -85,6 +91,7 @@ SCREW_CLR_D = 3.6   # M3 clearance in lid (prints ~0.2-0.3 undersize)
 CSK_D = 7.0         # countersink diameter (M3 csk head is 6.0 nominal)
 
 CAP_D = 17.0
+CAP_LEN = 33.0
 CAP_SADDLE_R = CAP_D / 2 + 0.25
 CAP_AXIS_H = CAP_SADDLE_R + 0.25   # saddle axis above floor; keeps the
                                    # saddle cut from gouging the floor
@@ -221,11 +228,12 @@ def build(with_storage):
     # 42 mm board + 0.5 mm clearance)
     adds.append(bx(IX0 + 42.5, PD_Y1 - 3.0, IZ0, IX0 + 44.5, PD_Y1, IZ0 + 8.0))
 
-    # capacitor saddle ribs
+    # capacitor saddle ribs at the quarter points of the centered cap body
+    cap_x0 = IX0 + (ELEC_LEN - CAP_LEN) / 2
     rib_solids = []
-    for rx in (IX0 + 12.0, IX0 + 32.0):
-        rib_solids.append(bx(rx, CAP_Y0, IZ0, rx + RIB_T, CAP_Y1,
-                             IZ0 + RIB_H))
+    for rcx in (cap_x0 + CAP_LEN * 0.25, cap_x0 + CAP_LEN * 0.75):
+        rib_solids.append(bx(rcx - RIB_T / 2, CAP_Y0, IZ0, rcx + RIB_T / 2,
+                             CAP_Y1, IZ0 + RIB_H))
     cap_cy = (CAP_Y0 + CAP_Y1) / 2
     saddle_cut = cyl_x(IX0 - 1, ex1 + 1, cap_cy, IZ0 + CAP_AXIS_H,
                        CAP_SADDLE_R)
@@ -234,14 +242,12 @@ def build(with_storage):
     if with_storage:
         # full-height wall between electronics and storage
         adds.append(bx(ex1, IY0, IZ0, bay_x0, CAP_Y1, iz1))
-        # battery retaining rib with a centered gap (finger access and
-        # pass-through for the dummy's attached cable)
+        # battery retaining rib; the gap sits at the far (cable) end of the
+        # pocket so the dummy's top-face cable can drop into the cable bay,
+        # and doubles as finger access. Store the dummy cable-end back.
         batt_y1 = IY0 + BATT_POCKET_L
-        gap_c = (IY0 + batt_y1) / 2
-        adds.append(bx(batt_x1, IY0, IZ0, rib_x1, gap_c - BATT_RIB_GAP / 2,
+        adds.append(bx(batt_x1, IY0, IZ0, rib_x1, batt_y1 - BATT_RIB_GAP,
                        IZ0 + BATT_RIB_H))
-        adds.append(bx(batt_x1, gap_c + BATT_RIB_GAP / 2, IZ0, rib_x1,
-                       batt_y1, IZ0 + BATT_RIB_H))
         # cross rib boxing in the battery's far end
         adds.append(bx(bay_x0, batt_y1, IZ0, rib_x1, batt_y1 + BATT_RIB_T,
                        IZ0 + 8.0))
@@ -269,6 +275,12 @@ def build(with_storage):
         exit_cy = (IY0 + CAP_Y1) / 2
         cuts.append(bx(ix1 - 0.1, exit_cy - WIRE_SLOT_W / 2, IZ0 + 7.0,
                        out_len + 1, exit_cy + WIRE_SLOT_W / 2, base_h + 1))
+        # deployment slot in the back wall over the battery pocket: in use,
+        # the dummy's cable runs straight out of the case to the camera
+        deploy_cx = bay_x0 + BATT_POCKET_W / 2
+        cuts.append(bx(deploy_cx - DEPLOY_SLOT_W / 2, CAP_Y1 - 0.1,
+                       IZ0 + 10.0, deploy_cx + DEPLOY_SLOT_W / 2, OUT_W + 1,
+                       base_h + 1))
         # snap grooves in the front/back wall inner faces (storage section)
         snap_cx = (bay_x0 + ix1) / 2
         snap_z = base_h - SNAP_Z_BELOW
@@ -353,6 +365,9 @@ def build(with_storage):
            base_h + 1),
         bx(ix1 - LIP_T - LIP_CLR - 1, exit_cy - WIRE_SLOT_W / 2 - 1,
            base_h - LIP_H - 1, ix1 + 1, exit_cy + WIRE_SLOT_W / 2 + 1,
+           base_h + 1),
+        bx(deploy_cx - DEPLOY_SLOT_W / 2 - 1, CAP_Y1 - LIP_T - LIP_CLR - 1,
+           base_h - LIP_H - 1, deploy_cx + DEPLOY_SLOT_W / 2 + 1, CAP_Y1 + 1,
            base_h + 1),
     ]
     hatch_lip = lip_ring(bay_x0, IY0, ix1, CAP_Y1, base_h, hatch_lip_cuts)
