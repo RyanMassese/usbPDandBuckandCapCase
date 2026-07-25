@@ -2,7 +2,7 @@
 """
 3D-printable enclosure for:
   1x Altronics Z6334  DC-DC buck module (LM2596, 43 x 21 x ~14 mm)
-  1x Altronics R6187  Lelon 1000uF 50V low-ESR capacitor (13 mm dia x 25 mm)
+  1x Altronics R6187  Lelon 1000uF 50V low-ESR capacitor (17 mm dia x 25 mm)
   1x Core Electronics USB-C PD trigger board, selectable voltage (42 x 18 mm)
 
 Two variants are exported (units: mm):
@@ -47,12 +47,12 @@ CORNER_R = 3.0      # outer corner radius
 # component envelopes (incl. fitting clearance)
 PD_LANE_W = 19.0    # PD board 18 wide
 BUCK_LANE_W = 22.0  # buck board 21 wide
-CAP_LANE_W = 14.5   # cap 13 dia
+CAP_LANE_W = 18.5   # cap 17 dia
 DIV_T = 2.0         # lane divider thickness
 DIV_H = 10.0        # lane divider height above floor
 
 ELEC_LEN = 50.0     # electronics section interior length (X)
-INT_H_COMPACT = 16.0   # buck ~14 tall, cap top at ~13.8
+INT_H_COMPACT = 18.5   # buck ~14 tall, 17 dia cap top at ~17.5
 INT_H_STORAGE = 22.0   # BP-511 dummy is ~21 thick, lying flat
 
 # storage section (BP-511: 55.2 x 38.2 x 20.8 nominal)
@@ -84,10 +84,12 @@ PILOT_DEPTH = 11.0
 SCREW_CLR_D = 3.6   # M3 clearance in lid (prints ~0.2-0.3 undersize)
 CSK_D = 7.0         # countersink diameter (M3 csk head is 6.0 nominal)
 
-CAP_D = 13.0
+CAP_D = 17.0
 CAP_SADDLE_R = CAP_D / 2 + 0.25
+CAP_AXIS_H = CAP_SADDLE_R + 0.25   # saddle axis above floor; keeps the
+                                   # saddle cut from gouging the floor
 RIB_T = 2.5
-RIB_H = 9.0         # rib height above floor; saddle axis at 7.0
+RIB_H = CAP_AXIS_H + 2.0           # ribs reach 2 mm above the cap axis
 
 USB_CUT_W = 14.0    # fits USB-C plug overmolds
 USB_CUT_H = 9.6     # from floor up
@@ -225,7 +227,8 @@ def build(with_storage):
         rib_solids.append(bx(rx, CAP_Y0, IZ0, rx + RIB_T, CAP_Y1,
                              IZ0 + RIB_H))
     cap_cy = (CAP_Y0 + CAP_Y1) / 2
-    saddle_cut = cyl_x(IX0 - 1, ex1 + 1, cap_cy, IZ0 + 7.0, CAP_SADDLE_R)
+    saddle_cut = cyl_x(IX0 - 1, ex1 + 1, cap_cy, IZ0 + CAP_AXIS_H,
+                       CAP_SADDLE_R)
     adds.append(diff(union(rib_solids), [saddle_cut]))
 
     if with_storage:

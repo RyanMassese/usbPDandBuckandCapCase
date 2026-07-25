@@ -6,7 +6,7 @@ built from:
 | Component | Part | Envelope used |
 |---|---|---|
 | DC-DC buck module 3–40 V in / 1.5–35 V out | [Altronics Z6334](https://www.altronics.com.au/p/z6334-dc-dc-buck-module-3-40v-input/) (LM2596) | 43 × 21 × 14 mm |
-| 1000 uF 50 V low-ESR electrolytic capacitor | [Altronics R6187](https://www.altronics.com.au/p/r6187-lelon-1000uf-50v-pcb-low-esr-electrolytic-capacitor/) | 13 mm dia × 25 mm |
+| 1000 uF 50 V low-ESR electrolytic capacitor | [Altronics R6187](https://www.altronics.com.au/p/r6187-lelon-1000uf-50v-pcb-low-esr-electrolytic-capacitor/) | 17 mm dia × 25 mm |
 | USB-C PD trigger board, selectable voltage | [Core Electronics CE08536](https://core-electronics.com.au/usb-c-pd-trigger-board-selectable-voltage.html) | 42 × 18 mm |
 
 A second **storage variant** additionally holds a BP-511 dummy battery
@@ -14,14 +14,14 @@ A second **storage variant** additionally holds a BP-511 dummy battery
 
 ## Files
 
-Compact (electronics only), external **54.8 × 64.3 × 20.8 mm**:
+Compact (electronics only), external **54.8 × 68.3 × 23.3 mm**:
 
 - `case_base.stl` — the box. Print as-is (flat bottom on the bed).
 - `case_lid.stl` — the lid, modeled in its assembled orientation.
 - `case_lid_print_orientation.stl` — same lid pre-flipped flat-top-down, ready to print.
 - `case_assembly_preview.stl` — base + lid together, for visual checking only.
 
-With storage section, external **132.4 × 64.3 × 26.8 mm** (two-part lid):
+With storage section, external **132.4 × 68.3 × 26.8 mm** (two-part lid):
 
 - `case_base_with_storage.stl` — the box.
 - `case_lid_with_storage_electronics.stl` — screwed lid over the electronics
@@ -50,19 +50,19 @@ Three parallel bays separated by 10 mm divider walls:
    final assembly. An 8 mm wire slot in the opposite end wall (open to the
    top edge) passes the output cable; closing the lid captures it.
 3. **Capacitor cradle** (back) — the 1000 uF cap lies on its side in two
-   saddle ribs (13.5 mm dia opening), leads facing the wire-slot end so they
+   saddle ribs (17.5 mm dia opening), leads facing the wire-slot end so they
    can bend down toward the buck output terminals.
 
 ### Storage variant
 
-The storage version is 22 mm deep inside (vs 16 mm) so the BP-511 dummy fits
+The storage version is 22 mm deep inside (vs 18.5 mm) so the BP-511 dummy fits
 lying flat, and adds a section right of the electronics, behind a full-height
 wall:
 
 4. **BP-511 pocket** — 40 × 56 mm pocket boxed in by a 12 mm retaining rib.
    The rib has a 24 mm centered gap for finger access and for the dummy's
    attached cable to pass into the cable bay.
-5. **Cable bay** — open 34 × 59.5 × 22 mm compartment (~45 cm³) for ~2 m of
+5. **Cable bay** — open 34 × 63.5 × 22 mm compartment (~45 cm³) for ~2 m of
    coiled cable. The buck output passes into the storage section through a
    notch in the dividing wall, and an 8 mm exit slot in the outer end wall
    lets the cable out with the lid closed.
