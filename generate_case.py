@@ -7,11 +7,14 @@
 
 Two variants are exported (units: mm):
   case_base.stl / case_lid.stl
-      compact electronics-only case
-  case_base_with_storage.stl / case_lid_with_storage.stl
+      compact electronics-only case, one screwed lid
+  case_base_with_storage.stl
+  case_lid_with_storage_electronics.stl / case_lid_with_storage_hatch.stl
       adds a storage section for a BP-511 dummy battery (55 x 38 x 21 mm)
       and ~2 m of coiled cable; the whole case is taller (22 mm interior)
-      so the battery fits lying flat.
+      so the battery fits lying flat. The lid is split at the section
+      wall: the electronics side is screwed shut, the storage side is a
+      tool-free snap-fit hatch with thumb notches.
 
 Layout of the storage variant (top view, +X right, +Y back):
 
@@ -23,6 +26,7 @@ Layout of the storage variant (top view, +X right, +Y back):
    USB-C| PD trigger bay            ||            |          |
    <----|                           ||            |          |
         +---------------------------++------------+----------+
+             ^ screwed lid               ^ snap hatch
 
 Run:  python3 generate_case.py
 """
@@ -59,6 +63,16 @@ BATT_RIB_H = 12.0
 BATT_RIB_GAP = 24.0    # centered gap: finger access + attached-cable pass
 CABLE_BAY_W = 34.0     # ~45 cm^3: 2 m of 4 mm cable coiled + plug
 SEC_DIV_T = 2.0        # full-height wall between electronics and storage
+LID_GAP = 0.4          # gap between the two lid plates at the split
+
+# snap-fit hatch (storage lid)
+SNAP_RIDGE_R = 0.55    # half-round ridge on the hatch lip, front + back
+SNAP_RIDGE_L = 16.0
+SNAP_GROOVE_R = 0.8    # matching groove in the wall inner faces
+SNAP_GROOVE_L = 20.0
+SNAP_Z_BELOW = 1.5     # ridge/groove centerline below the lid seam
+NOTCH_R = 5.0          # thumb notch in the wall top edges
+NOTCH_DROP = 3.0       # notch depth below the lid seam
 
 POST_D = 7.0        # lid screw posts
 PILOT_D = 2.7       # M3 self-tap pilot
@@ -122,6 +136,14 @@ def cyl_x(x0, x1, cy, cz, r):
     return m
 
 
+def cyl_y(cx, y0, y1, cz, r):
+    m = trimesh.creation.cylinder(radius=r, height=y1 - y0, sections=SEG)
+    m.apply_transform(trimesh.transformations.rotation_matrix(
+        np.pi / 2, [1, 0, 0]))
+    m.apply_translation([cx, (y0 + y1) / 2, cz])
+    return m
+
+
 def cone_z(cx, cy, z_tip, z_top, d_top):
     m = trimesh.creation.cone(radius=d_top / 2, height=z_top - z_tip,
                               sections=SEG)
@@ -139,6 +161,17 @@ def diff(a, parts):
     return trimesh.boolean.difference([a] + parts, engine='manifold')
 
 
+def lip_ring(x0, y0, x1, y1, base_h, extra_cuts):
+    """Alignment lip descending from a lid: perimeter ring just inside the
+    cavity rectangle (x0,y0)-(x1,y1)."""
+    outer = bx(x0 + LIP_CLR, y0 + LIP_CLR, base_h - LIP_H,
+               x1 - LIP_CLR, y1 - LIP_CLR, base_h)
+    inner = bx(x0 + LIP_CLR + LIP_T, y0 + LIP_CLR + LIP_T,
+               base_h - LIP_H - 1,
+               x1 - LIP_CLR - LIP_T, y1 - LIP_CLR - LIP_T, base_h + 1)
+    return diff(outer, [inner] + extra_cuts)
+
+
 def build(with_storage):
     int_h = INT_H_STORAGE if with_storage else INT_H_COMPACT
     base_h = FLOOR + int_h
@@ -154,18 +187,14 @@ def build(with_storage):
         ix1 = ex1
     out_len = ix1 + WALL
 
-    # lid screw posts. The left-front corner is where the PD board meets the
-    # USB-C wall, so no post there; the lip locates that corner.
+    # lid screw posts, all in the electronics section. The left-front corner
+    # is where the PD board meets the USB-C wall, so no post there; the lip
+    # locates that corner. The storage hatch has no screws at all.
     posts = [
         (ex1 - POST_D / 2, PD_Y0 + POST_D / 2),
         (ex1 - POST_D / 2, CAP_Y1 - POST_D / 2),
         (IX0 + POST_D / 2, CAP_Y1 - POST_D / 2),
     ]
-    if with_storage:                        # cable-bay corners
-        posts += [
-            (ix1 - POST_D / 2, PD_Y0 + POST_D / 2),
-            (ix1 - POST_D / 2, CAP_Y1 - POST_D / 2),
-        ]
 
     # ------------------------------------------------------------- base
     shell = extrude(rounded_rect(0, 0, out_len, OUT_W, CORNER_R), 0, base_h)
@@ -210,7 +239,6 @@ def build(with_storage):
         adds.append(bx(bay_x0, batt_y1, IZ0, rib_x1, batt_y1 + BATT_RIB_T,
                        IZ0 + 8.0))
 
-    # lid screw posts
     for px, py in posts:
         adds.append(cyl_z(px, py, IZ0, iz1, POST_D))
 
@@ -234,6 +262,17 @@ def build(with_storage):
         exit_cy = (IY0 + CAP_Y1) / 2
         cuts.append(bx(ix1 - 0.1, exit_cy - WIRE_SLOT_W / 2, IZ0 + 7.0,
                        out_len + 1, exit_cy + WIRE_SLOT_W / 2, base_h + 1))
+        # snap grooves in the front/back wall inner faces (storage section)
+        snap_cx = (bay_x0 + ix1) / 2
+        snap_z = base_h - SNAP_Z_BELOW
+        for wy in (IY0, CAP_Y1):
+            cuts.append(cyl_x(snap_cx - SNAP_GROOVE_L / 2,
+                              snap_cx + SNAP_GROOVE_L / 2, wy, snap_z,
+                              SNAP_GROOVE_R))
+        # thumb notches in the front/back wall top edges
+        for ny0, ny1 in [(-1, IY0), (CAP_Y1, OUT_W + 1)]:
+            cuts.append(cyl_y(snap_cx, ny0, ny1,
+                              base_h + NOTCH_R - NOTCH_DROP, NOTCH_R))
     else:
         # output wire slot straight through the right wall
         exit_cy = wire_cy
@@ -242,48 +281,83 @@ def build(with_storage):
 
     base = diff(base, cuts)
 
-    # -------------------------------------------------------------- lid
-    plate = extrude(rounded_rect(0, 0, out_len, OUT_W, CORNER_R),
-                    base_h, base_h + LID_T)
-    lip_outer = bx(IX0 + LIP_CLR, PD_Y0 + LIP_CLR, base_h - LIP_H,
-                   ix1 - LIP_CLR, CAP_Y1 - LIP_CLR, base_h)
-    lip_inner = bx(IX0 + LIP_CLR + LIP_T, PD_Y0 + LIP_CLR + LIP_T,
-                   base_h - LIP_H - 1,
-                   ix1 - LIP_CLR - LIP_T, CAP_Y1 - LIP_CLR - LIP_T,
-                   base_h + 1)
-    lip_cuts = [lip_inner]
-    for px, py in posts:
-        lip_cuts.append(cyl_z(px, py, base_h - LIP_H - 1, base_h + 1,
-                              POST_D + 2 * LIP_CLR))
-    # clear the exit slot so the cable can pass under the lid edge
-    lip_cuts.append(bx(ix1 - LIP_T - LIP_CLR - 1, exit_cy - WIRE_SLOT_W / 2
-                       - 1, base_h - LIP_H - 1, ix1 + 1,
-                       exit_cy + WIRE_SLOT_W / 2 + 1, base_h + 1))
-    lid = union([plate, diff(lip_outer, lip_cuts)])
+    # -------------------------------------------------------------- lid(s)
+    full_plate = extrude(rounded_rect(0, 0, out_len, OUT_W, CORNER_R),
+                         base_h, base_h + LID_T)
 
-    lid_cuts = []
-    for px, py in posts:
-        lid_cuts.append(cyl_z(px, py, base_h - LIP_H - 1, base_h + LID_T + 1,
-                              SCREW_CLR_D))
-        lid_cuts.append(cone_z(px, py, base_h + LID_T - (CSK_D / 2),
-                               base_h + LID_T + 0.01, CSK_D + 0.02))
+    def screw_cuts():
+        c = []
+        for px, py in posts:
+            c.append(cyl_z(px, py, base_h - LIP_H - 1, base_h + LID_T + 1,
+                           SCREW_CLR_D))
+            c.append(cone_z(px, py, base_h + LID_T - (CSK_D / 2),
+                            base_h + LID_T + 0.01, CSK_D + 0.02))
+        return c
 
-    # vent slots over the buck module (3 mm wide: doubles as trimpot
-    # screwdriver access)
-    n_slots = 5
-    slot_len = 26.0
-    slot_x0 = IX0 + (ELEC_LEN - slot_len) / 2
-    for i in range(n_slots):
-        sy = BUCK_Y0 + 2.5 + i * (BUCK_LANE_W - 5 - 3.0) / (n_slots - 1)
-        lid_cuts.append(bx(slot_x0, sy, base_h - 1,
-                           slot_x0 + slot_len, sy + 3.0, base_h + LID_T + 1))
+    def vent_cuts():
+        c = []
+        n_slots = 5
+        slot_len = 26.0
+        slot_x0 = IX0 + (ELEC_LEN - slot_len) / 2
+        for i in range(n_slots):
+            sy = BUCK_Y0 + 2.5 + i * (BUCK_LANE_W - 5 - 3.0) / (n_slots - 1)
+            c.append(bx(slot_x0, sy, base_h - 1,
+                        slot_x0 + slot_len, sy + 3.0, base_h + LID_T + 1))
+        # access slot over the PD board voltage button / LEDs
+        c.append(bx(IX0 + 6.0, usb_cy - 3.0, base_h - 1,
+                    IX0 + 20.0, usb_cy + 3.0, base_h + LID_T + 1))
+        return c
 
-    # access slot over the PD board voltage button / LEDs
-    lid_cuts.append(bx(IX0 + 6.0, usb_cy - 3.0, base_h - 1,
-                       IX0 + 20.0, usb_cy + 3.0, base_h + LID_T + 1))
+    post_lip_cuts = [cyl_z(px, py, base_h - LIP_H - 1, base_h + 1,
+                           POST_D + 2 * LIP_CLR) for px, py in posts]
 
-    lid = diff(lid, lid_cuts)
-    return base, lid
+    if not with_storage:
+        exit_lip_cut = bx(ix1 - LIP_T - LIP_CLR - 1,
+                          exit_cy - WIRE_SLOT_W / 2 - 1, base_h - LIP_H - 1,
+                          ix1 + 1, exit_cy + WIRE_SLOT_W / 2 + 1, base_h + 1)
+        lip = lip_ring(IX0, PD_Y0, ix1, CAP_Y1, base_h,
+                       post_lip_cuts + [exit_lip_cut])
+        lid = diff(union([full_plate, lip]), screw_cuts() + vent_cuts())
+        return {'case_base': base, 'case_lid': lid}
+
+    x_split = ex1 + SEC_DIV_T / 2   # both plates land on the section wall
+    elec_plate = diff(full_plate, [bx(x_split - LID_GAP / 2, -1, base_h - 1,
+                                      out_len + 1, OUT_W + 1,
+                                      base_h + LID_T + 1)])
+    hatch_plate = diff(full_plate, [bx(-1, -1, base_h - 1,
+                                       x_split + LID_GAP / 2, OUT_W + 1,
+                                       base_h + LID_T + 1)])
+
+    # electronics lid: screwed, lip around the electronics cavity, cut where
+    # the buck output cable passes through the section-wall notch
+    wire_lip_cut = bx(ex1 - LIP_T - LIP_CLR - 1, wire_cy - WIRE_SLOT_W / 2
+                      - 1, base_h - LIP_H - 1, ex1 + 1,
+                      wire_cy + WIRE_SLOT_W / 2 + 1, base_h + 1)
+    elec_lip = lip_ring(IX0, PD_Y0, ex1, CAP_Y1, base_h,
+                        post_lip_cuts + [wire_lip_cut])
+    elec_lid = diff(union([elec_plate, elec_lip]),
+                    screw_cuts() + vent_cuts())
+
+    # storage hatch: snap-fit, no screws. Lip cut at the section-wall notch
+    # (left) and the cable exit slot (right); snap ridges on front/back.
+    hatch_lip_cuts = [
+        bx(bay_x0 - 1, wire_cy - WIRE_SLOT_W / 2 - 1, base_h - LIP_H - 1,
+           bay_x0 + LIP_T + LIP_CLR + 1, wire_cy + WIRE_SLOT_W / 2 + 1,
+           base_h + 1),
+        bx(ix1 - LIP_T - LIP_CLR - 1, exit_cy - WIRE_SLOT_W / 2 - 1,
+           base_h - LIP_H - 1, ix1 + 1, exit_cy + WIRE_SLOT_W / 2 + 1,
+           base_h + 1),
+    ]
+    hatch_lip = lip_ring(bay_x0, IY0, ix1, CAP_Y1, base_h, hatch_lip_cuts)
+    snap_z = base_h - SNAP_Z_BELOW
+    ridges = [cyl_x(snap_cx - SNAP_RIDGE_L / 2, snap_cx + SNAP_RIDGE_L / 2,
+                    ry, snap_z, SNAP_RIDGE_R)
+              for ry in (IY0 + LIP_CLR, CAP_Y1 - LIP_CLR)]
+    hatch = union([hatch_plate, hatch_lip] + ridges)
+
+    return {'case_base_with_storage': base,
+            'case_lid_with_storage_electronics': elec_lid,
+            'case_lid_with_storage_hatch': hatch}
 
 
 def export(name, mesh):
@@ -293,17 +367,17 @@ def export(name, mesh):
           f'bounds={np.round(mesh.bounds, 1).tolist()}')
 
 
-for suffix, with_storage in [('', False), ('_with_storage', True)]:
-    base, lid = build(with_storage)
-    export(f'case_base{suffix}.stl', base)
-    export(f'case_lid{suffix}.stl', lid)
-
-    lid_print = lid.copy()
-    lid_print.apply_transform(trimesh.transformations.rotation_matrix(
-        np.pi, [1, 0, 0]))
-    lid_print.apply_translation([0, 0, -lid_print.bounds[0][2]])
-    lid_print.export(f'case_lid{suffix}_print_orientation.stl')
-    print(f'case_lid{suffix}_print_orientation.stl written (flipped to print)')
-
-    union([base, lid]).export(f'case_assembly{suffix}_preview.stl')
+for with_storage in (False, True):
+    parts = build(with_storage)
+    for name, mesh in parts.items():
+        export(f'{name}.stl', mesh)
+        if 'lid' in name or 'hatch' in name:
+            flipped = mesh.copy()
+            flipped.apply_transform(trimesh.transformations.rotation_matrix(
+                np.pi, [1, 0, 0]))
+            flipped.apply_translation([0, 0, -flipped.bounds[0][2]])
+            flipped.export(f'{name}_print_orientation.stl')
+            print(f'{name}_print_orientation.stl written (flipped to print)')
+    suffix = '_with_storage' if with_storage else ''
+    union(list(parts.values())).export(f'case_assembly{suffix}_preview.stl')
     print(f'case_assembly{suffix}_preview.stl written (visual check only)')

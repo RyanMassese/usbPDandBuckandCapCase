@@ -21,11 +21,16 @@ Compact (electronics only), external **54.8 × 64.3 × 20.8 mm**:
 - `case_lid_print_orientation.stl` — same lid pre-flipped flat-top-down, ready to print.
 - `case_assembly_preview.stl` — base + lid together, for visual checking only.
 
-With storage section, external **132.4 × 64.3 × 26.8 mm**:
+With storage section, external **132.4 × 64.3 × 26.8 mm** (two-part lid):
 
-- `case_base_with_storage.stl`, `case_lid_with_storage.stl`,
-  `case_lid_with_storage_print_orientation.stl`,
-  `case_assembly_with_storage_preview.stl` — same roles as above.
+- `case_base_with_storage.stl` — the box.
+- `case_lid_with_storage_electronics.stl` — screwed lid over the electronics
+  section (3 × M3).
+- `case_lid_with_storage_hatch.stl` — tool-free snap-fit hatch over the
+  battery/cable storage section.
+- `case_lid_with_storage_electronics_print_orientation.stl`,
+  `case_lid_with_storage_hatch_print_orientation.stl` — pre-flipped to print.
+- `case_assembly_with_storage_preview.stl` — visual check only.
 
 Shared:
 
@@ -62,7 +67,15 @@ wall:
    notch in the dividing wall, and an 8 mm exit slot in the outer end wall
    lets the cable out with the lid closed.
 
-The storage lid takes 5 M3 screws instead of 3.
+The lid is split in two at the section wall:
+
+- **Electronics lid** — screwed down with the same 3 × M3 self-tappers as the
+  compact case. You only open this for wiring changes.
+- **Storage hatch** — no screws. A half-round snap ridge on each long edge of
+  its lip clicks into matching grooves in the case walls (~0.25 mm
+  engagement). Thumb notches in both wall top edges, centered on the storage
+  section, let you push the hatch edge up to pop it off. Snap tightness is
+  tuned via `SNAP_RIDGE_R` / `SNAP_GROOVE_R` in the script.
 
 ## Assembly
 
