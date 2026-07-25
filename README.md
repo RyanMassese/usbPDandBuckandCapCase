@@ -79,19 +79,24 @@ The storage version is 26.5 mm deep inside (vs 18.5 mm): the BP-511 dummy is
 battery. The section sits right of the electronics, behind a full-height
 wall:
 
-4. **BP-511 pocket** — 40 × 56 mm pocket boxed in by a 12 mm retaining rib.
-   The rib stops 26 mm short of the pocket's far end: store the dummy with
-   its cable end toward that gap, so the attached cable drops through into
-   the cable bay. The gap doubles as finger access to lift the dummy out.
-5. **Cable bay** — open 34 × 63.5 × 26.5 mm compartment (~55 cm³) for ~2 m
-   of coiled cable. Because the output cable is soldered at the buck's OUT
-   end (the USB-C end), it runs back over the top of the buck module and
-   through a **high** notch in the dividing wall — there is 12.5 mm of
-   headroom above the module in this variant. An 8 mm exit slot in the outer
-   end wall lets the cable out with the lid closed.
-6. **Deployment slot** — an 8 mm slot in the back wall directly over the
-   battery pocket, so in use the dummy's cable can run straight out of the
-   case to the camera with everything closed up.
+The bays follow the cable's own order — it arrives from the electronics, gets
+coiled, and ends at the dummy — so the coil bay comes first and the BP-511
+sits at the outer end beside the slot it deploys through:
+
+4. **Cable bay** — open 34 × 63.5 × 26.5 mm compartment (~55 cm³) for ~2 m of
+   coiled cable, first thing past the section wall. Because the output cable
+   is soldered at the buck's OUT end (the USB-C end), it runs back over the
+   top of the buck module and through a **high** notch in that wall — there
+   is 12.5 mm of headroom above the module in this variant.
+5. **BP-511 pocket** — 40 × 56 mm pocket at the outer end, behind a 12 mm
+   retaining rib. The rib is well under the dummy's 21 mm thickness, so its
+   top-face cable simply passes over into the bay; the rib's 26 mm gap is
+   finger access to lift the dummy out.
+6. **Deployment slot** — an 8 mm slot in the outer end wall beside the stored
+   dummy, at the opposite end of the case from the USB-C inlet. It is open to
+   the top edge: with the hatch off, lift the dummy out over the wall, drop
+   its cable into the slot, and snap the hatch back on with the unused length
+   still coiled inside.
 
 The lid is split in two at the section wall:
 

@@ -34,11 +34,11 @@ Storage variant (top view): the same electronics section, then a full-height
 wall and the storage bays. Its output cable runs back over the top of the buck
 module and through a high notch in that wall.
 
-        +---------------- elec ----++------------+----------+
-        |    (as above)            || BP-511     |  cable   |
-        |                  [notch]->  dummy      |  bay     |
-        |                          || pocket     | [exit]-> |
-        +--------------------------++------------+----------+
+        +---------------- elec ----++----------+-------------+
+        |    (as above)            ||  cable   | BP-511      |
+        |                  [notch]->   bay     | dummy       |
+        |                          ||          | pocket [exit]->
+        +--------------------------++----------+-------------+
              ^ screwed lid               ^ snap hatch
 
 Run:  python3 generate_case.py
@@ -88,11 +88,8 @@ BATT_POCKET_W = 40.0   # X, battery 38.2 wide
 BATT_POCKET_L = 56.0   # Y, battery 55.2 long
 BATT_RIB_T = 1.6       # retaining rib between battery and cable bay
 BATT_RIB_H = 12.0
-BATT_RIB_GAP = 26.0    # gap at the cable end of the pocket (the dummy's
-                       # top-face cable hole is near one short end): finger
-                       # access + attached-cable pass into the cable bay
-DEPLOY_SLOT_W = 8.0    # slot in the outer back wall over the battery pocket
-                       # so the cable can run straight out to the camera
+BATT_RIB_GAP = 26.0    # gap in the retaining rib: finger access to lift the
+                       # dummy out (its top-face cable clears the rib anyway)
 CABLE_BAY_W = 34.0     # ~45 cm^3: 2 m of 4 mm cable coiled + plug
 SEC_DIV_T = 2.0        # full-height wall between electronics and storage
 LID_GAP = 0.4          # gap between the two lid plates at the split
@@ -218,10 +215,13 @@ def build(with_storage):
 
     ex1 = IX0 + ELEC_LEN                    # electronics section right edge
     if with_storage:
-        bay_x0 = ex1 + SEC_DIV_T            # storage bay left edge
-        batt_x1 = bay_x0 + BATT_POCKET_W    # battery pocket right edge
-        rib_x1 = batt_x1 + BATT_RIB_T
-        ix1 = rib_x1 + CABLE_BAY_W          # interior right edge
+        # bays follow the cable: it arrives from the electronics section, so
+        # the coil bay comes first and the dummy on the cable's far end sits
+        # at the outer end, next to the exit slot it deploys through.
+        bay_x0 = ex1 + SEC_DIV_T            # storage section left edge
+        cable_x1 = bay_x0 + CABLE_BAY_W     # cable bay right edge
+        rib_x1 = cable_x1 + BATT_RIB_T      # battery retaining rib
+        ix1 = rib_x1 + BATT_POCKET_W        # interior right edge
     else:
         ix1 = ex1
     out_len = ix1 + WALL
@@ -278,14 +278,15 @@ def build(with_storage):
     if with_storage:
         # full-height wall between electronics and storage
         adds.append(bx(ex1, IY0, IZ0, bay_x0, CAP_Y1, iz1))
-        # battery retaining rib; the gap sits at the far (cable) end of the
-        # pocket so the dummy's top-face cable can drop into the cable bay,
-        # and doubles as finger access. Store the dummy cable-end back.
+        # battery retaining rib, between the cable bay and the pocket. It is
+        # only 12 mm tall against the dummy's 21 mm, so the top-face cable
+        # passes over it into the bay; the gap is finger access to lift the
+        # dummy out.
         batt_y1 = IY0 + BATT_POCKET_L
-        adds.append(bx(batt_x1, IY0, IZ0, rib_x1, batt_y1 - BATT_RIB_GAP,
+        adds.append(bx(cable_x1, IY0, IZ0, rib_x1, batt_y1 - BATT_RIB_GAP,
                        IZ0 + BATT_RIB_H))
         # cross rib boxing in the battery's far end
-        adds.append(bx(bay_x0, batt_y1, IZ0, rib_x1, batt_y1 + BATT_RIB_T,
+        adds.append(bx(rib_x1, batt_y1, IZ0, ix1, batt_y1 + BATT_RIB_T,
                        IZ0 + 8.0))
 
     for px, py in posts:
@@ -309,16 +310,13 @@ def build(with_storage):
         # high notch in the section wall into the storage bay
         cuts.append(bx(ex1 - 0.1, wire_cy - WIRE_SLOT_W / 2, IZ0 + 15.0,
                        bay_x0 + 0.1, wire_cy + WIRE_SLOT_W / 2, iz1 + 1))
-        # cable exit slot in the outer right wall, centered
+        # deployment slot in the outer end wall, right beside the stored
+        # dummy and at the opposite end of the case from the USB-C inlet.
+        # Open to the top edge, so with the hatch off you lift the dummy out
+        # over the wall and drop its cable into the slot.
         exit_cy = (IY0 + CAP_Y1) / 2
         cuts.append(bx(ix1 - 0.1, exit_cy - WIRE_SLOT_W / 2, IZ0 + 7.0,
                        out_len + 1, exit_cy + WIRE_SLOT_W / 2, base_h + 1))
-        # deployment slot in the back wall over the battery pocket: in use,
-        # the dummy's cable runs straight out of the case to the camera
-        deploy_cx = bay_x0 + BATT_POCKET_W / 2
-        cuts.append(bx(deploy_cx - DEPLOY_SLOT_W / 2, CAP_Y1 - 0.1,
-                       IZ0 + 10.0, deploy_cx + DEPLOY_SLOT_W / 2, OUT_W + 1,
-                       base_h + 1))
         # snap grooves in the front/back wall inner faces (storage section)
         snap_cx = (bay_x0 + ix1) / 2
         snap_z = base_h - SNAP_Z_BELOW
@@ -404,9 +402,6 @@ def build(with_storage):
            base_h + 1),
         bx(ix1 - LIP_T - LIP_CLR - 1, exit_cy - WIRE_SLOT_W / 2 - 1,
            base_h - LIP_H - 1, ix1 + 1, exit_cy + WIRE_SLOT_W / 2 + 1,
-           base_h + 1),
-        bx(deploy_cx - DEPLOY_SLOT_W / 2 - 1, CAP_Y1 - LIP_T - LIP_CLR - 1,
-           base_h - LIP_H - 1, deploy_cx + DEPLOY_SLOT_W / 2 + 1, CAP_Y1 + 1,
            base_h + 1),
     ]
     hatch_lip = lip_ring(bay_x0, IY0, ix1, CAP_Y1, base_h, hatch_lip_cuts)
