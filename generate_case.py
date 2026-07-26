@@ -90,7 +90,9 @@ BATT_RIB_T = 1.6       # retaining rib between battery and cable bay
 BATT_RIB_H = 12.0
 BATT_RIB_GAP = 26.0    # gap in the retaining rib: finger access to lift the
                        # dummy out (its top-face cable clears the rib anyway)
-CABLE_BAY_W = 34.0     # ~45 cm^3: 2 m of 4 mm cable coiled + plug
+CABLE_BAY_W = 44.2     # 44.2 x 63.5 x 26.5 = ~74 cm^3 of coil space. Bay
+                       # height and width are pinned by the battery and the
+                       # case width, so length is the only free dimension.
 SEC_DIV_T = 2.0        # full-height wall between electronics and storage
 LID_GAP = 0.4          # gap between the two lid plates at the split
 

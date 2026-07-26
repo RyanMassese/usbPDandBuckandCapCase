@@ -21,7 +21,7 @@ Compact (electronics only), external **60.8 × 68.3 × 23.3 mm**:
 - `case_lid_print_orientation.stl` — same lid pre-flipped flat-top-down, ready to print.
 - `case_assembly_preview.stl` — base + lid together, for visual checking only.
 
-With storage section, external **138.4 × 68.3 × 31.3 mm** (two-part lid):
+With storage section, external **148.6 × 68.3 × 31.3 mm** (two-part lid):
 
 - `case_base_with_storage.stl` — the box.
 - `case_lid_with_storage_electronics.stl` — screwed lid over the electronics
@@ -83,7 +83,7 @@ The bays follow the cable's own order — it arrives from the electronics, gets
 coiled, and ends at the dummy — so the coil bay comes first and the BP-511
 sits at the outer end beside the slot it deploys through:
 
-4. **Cable bay** — open 34 × 63.5 × 26.5 mm compartment (~55 cm³) for ~2 m of
+4. **Cable bay** — open 44 × 63.5 × 26.5 mm compartment (~74 cm³) for ~2 m of
    coiled cable, first thing past the section wall. Because the output cable
    is soldered at the buck's OUT end (the USB-C end), it runs back over the
    top of the buck module and through a **high** notch in that wall — there
